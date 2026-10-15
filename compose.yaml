@@ -1,0 +1,112 @@
+services:
+  # --------------------------------------------------
+  # 1. CockroachDB — Distributed SQL
+  # --------------------------------------------------
+  cockroachdb:
+    image: cockroachdb/cockroach:latest
+    container_name: lab-cockroachdb
+    restart: unless-stopped
+
+    command:
+      - start-single-node
+      - --insecure
+      - --http-addr=0.0.0.0:8080
+
+    ports:
+      - "26257:26257"
+      - "8081:8080"
+
+    volumes:
+      - cockroach_data:/cockroach/cockroach-data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - cockroach sql --insecure --host=localhost:26257 --execute="SELECT 1" >/dev/null 2>&1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+    networks:
+      - database-network
+
+  # --------------------------------------------------
+  # 2. CouchDB — Document Database
+  # --------------------------------------------------
+  couchdb:
+    image: couchdb:3
+    container_name: lab-couchdb
+    restart: unless-stopped
+
+    environment:
+      COUCHDB_USER: ${COUCHDB_USER:?Set COUCHDB_USER in .env}
+      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD:?Set COUCHDB_PASSWORD in .env}
+
+    ports:
+      - "5984:5984"
+
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://$${COUCHDB_USER}:$${COUCHDB_PASSWORD}@localhost:5984/_up >/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+    networks:
+      - database-network
+
+  # --------------------------------------------------
+  # 3. ClickHouse — Analytics and Event Storage
+  # --------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: lab-clickhouse
+    restart: unless-stopped
+
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:?Set CLICKHOUSE_DATABASE in .env}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:?Set CLICKHOUSE_USER in .env}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - clickhouse-client --query "SELECT 1" --user "$${CLICKHOUSE_USER}" --password "$${CLICKHOUSE_PASSWORD}" >/dev/null 2>&1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - database-network
+
+# ----------------------------------------------------
+# Persistent storage
+# ----------------------------------------------------
+volumes:
+  cockroach_data:
+  couchdb_data:
+  clickhouse_data:
+  clickhouse_logs:
+
+# ----------------------------------------------------
+# Private network
+# ----------------------------------------------------
+networks:
+  database-network:
+    driver: bridge
