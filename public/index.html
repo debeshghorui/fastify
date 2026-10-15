@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta name="description" content="Multi-database playground for CRUD operations and database observability." />
+
+    <title>DB Lab — Multi-Database Playground</title>
+
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="/">
+                <span class="brand-icon">D</span>
+                <span>
+                    <strong>DB Lab</strong>
+                    <small>Developer Playground</small>
+                </span>
+            </a>
+
+            <div class="sidebar-label">WORKSPACE</div>
+
+            <nav class="navigation">
+                <button class="nav-link active" data-view="overview">
+                    <span>◫</span> Overview
+                </button>
+
+                <button class="nav-link" data-view="cockroach">
+                    <span>▦</span> CockroachDB
+                </button>
+
+                <button class="nav-link" data-view="couch">
+                    <span>◇</span> CouchDB
+                </button>
+
+                <button class="nav-link" data-view="analytics">
+                    <span>⌁</span> ClickHouse Logs
+                </button>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="connection-indicator">
+                    <span class="status-dot"></span>
+                    <span>
+                        <strong>Local environment</strong>
+                        <small id="server-status">Checking server...</small>
+                    </span>
+                </div>
+
+                <p>Multi-Database Playground</p>
+                <small>Built with Fastify</small>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <div class="breadcrumb">Workspace / <span id="breadcrumb">Overview</span></div>
+                    <h1 id="page-title">Overview</h1>
+                </div>
+
+                <div class="topbar-actions">
+                    <span class="environment-badge">
+                        <span class="status-dot"></span>
+                        LOCAL
+                    </span>
+
+                    <button class="button button-secondary" id="refresh-button">
+                        Refresh data
+                    </button>
+                </div>
+            </header>
+
+            <div id="notification" class="notification" hidden></div>
+
+            <!-- OVERVIEW -->
+            <section class="view active" id="view-overview">
+                <div class="welcome-card">
+                    <div>
+                        <span class="eyebrow">DEVELOPER WORKSPACE</span>
+                        <h2>Your databases. One workspace.</h2>
+                        <p>
+                            Test CRUD operations, monitor database performance, and
+                            inspect execution logs from a single dashboard.
+                        </p>
+                    </div>
+
+                    <div class="welcome-decoration">DB<span>.</span></div>
+                </div>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Operation metrics</h2>
+                        <p>Based on events recorded in ClickHouse.</p>
+                    </div>
+                </div>
+
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Total operations</span>
+                        <strong id="metric-total">—</strong>
+                        <small>Recorded database operations</small>
+                    </article>
+
+                    <article class="metric-card">
+                        <span>Successful operations</span>
+                        <strong id="metric-success">—</strong>
+                        <small>Completed without errors</small>
+                    </article>
+
+                    <article class="metric-card">
+                        <span>Failed operations</span>
+                        <strong id="metric-failed">—</strong>
+                        <small>Operations that threw errors</small>
+                    </article>
+
+                    <article class="metric-card">
+                        <span>Average duration</span>
+                        <strong id="metric-duration">—</strong>
+                        <small>Measured operation duration</small>
+                    </article>
+                </div>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Database operations</h2>
+                        <p>Select a database to start testing.</p>
+                    </div>
+                </div>
+
+                <div class="database-grid">
+                    <article class="database-card">
+                        <div class="database-icon cockroach-icon">CR</div>
+                        <span class="database-type">RELATIONAL DATABASE</span>
+                        <h3>CockroachDB</h3>
+                        <p>
+                            Create and manage structured records using Drizzle ORM.
+                        </p>
+                        <button class="button button-secondary" data-go="cockroach">
+                            Manage records →
+                        </button>
+                    </article>
+
+                    <article class="database-card">
+                        <div class="database-icon couch-icon">CO</div>
+                        <span class="database-type">DOCUMENT DATABASE</span>
+                        <h3>CouchDB</h3>
+                        <p>
+                            Store and manage flexible JSON documents through Nano.
+                        </p>
+                        <button class="button button-secondary" data-go="couch">
+                            Manage documents →
+                        </button>
+                    </article>
+
+                    <article class="database-card">
+                        <div class="database-icon click-icon">CH</div>
+                        <span class="database-type">ANALYTICS DATABASE</span>
+                        <h3>ClickHouse</h3>
+                        <p>
+                            Inspect execution times, operation failures, and logs.
+                        </p>
+                        <button class="button button-secondary" data-go="analytics">
+                            View analytics →
+                        </button>
+                    </article>
+                </div>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Recent operations</h2>
+                        <p>The latest events received from ClickHouse.</p>
+                    </div>
+
+                    <button class="text-button" data-go="analytics">
+                        View all logs →
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Database</th>
+                                    <th>Operation</th>
+                                    <th>Function</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-logs">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Loading operations...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COCKROACHDB -->
+            <section class="view" id="view-cockroach">
+                <div class="section-heading">
+                    <div>
+                        <h2>Relational records</h2>
+                        <p>Manage records stored in CockroachDB.</p>
+                    </div>
+
+                    <button class="button button-primary" id="new-record-button">
+                        + New record
+                    </button>
+                </div>
+
+                <form class="form-card" id="record-form" hidden>
+                    <div class="form-heading">
+                        <div>
+                            <h3 id="record-form-title">Create record</h3>
+                            <p>Changes are persisted in CockroachDB.</p>
+                        </div>
+
+                        <button type="button" class="icon-button" data-close="record-form">
+                            ×
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="record-id" />
+
+                    <div class="form-grid">
+                        <label>
+                            Name
+                            <input id="record-name" name="name" maxlength="100" required
+                                placeholder="e.g. API Monitoring" />
+                        </label>
+
+                        <label>
+                            Email
+                            <input id="record-email" name="email" type="email" maxlength="255" required
+                                placeholder="developer@example.com" />
+                        </label>
+
+                        <label class="full-width">
+                            Description
+                            <textarea id="record-description" name="description" rows="3"
+                                placeholder="Describe this record..."></textarea>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="button button-secondary" data-close="record-form">
+                            Cancel
+                        </button>
+
+                        <button type="submit" class="button button-primary" id="save-record">
+                            Create record
+                        </button>
+                    </div>
+                </form>
+
+                <div class="table-card">
+                    <div class="table-toolbar">
+                        <div>
+                            <strong>Records</strong>
+                            <span class="table-count" id="record-count">0 records</span>
+                        </div>
+
+                        <button class="button button-secondary button-small" id="reload-records">
+                            Reload
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Description</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="records-table">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Loading records...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COUCHDB -->
+            <section class="view" id="view-couch">
+                <div class="section-heading">
+                    <div>
+                        <h2>JSON documents</h2>
+                        <p>Manage document data stored in CouchDB.</p>
+                    </div>
+
+                    <button class="button button-primary" id="new-document-button">
+                        + New document
+                    </button>
+                </div>
+
+                <form class="form-card" id="document-form" hidden>
+                    <div class="form-heading">
+                        <div>
+                            <h3 id="document-form-title">Create document</h3>
+                            <p>Store a JSON document in CouchDB.</p>
+                        </div>
+
+                        <button type="button" class="icon-button" data-close="document-form">
+                            ×
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="document-id" />
+
+                    <div class="form-grid">
+                        <label>
+                            Title
+                            <input id="document-title" maxlength="200" required placeholder="Document title" />
+                        </label>
+
+                        <label>
+                            Category
+                            <input id="document-category" maxlength="100" placeholder="e.g. development" />
+                        </label>
+
+                        <label class="full-width">
+                            Content
+                            <textarea id="document-content" rows="3" placeholder="Document content..."></textarea>
+                        </label>
+
+                        <label class="full-width">
+                            Tags
+                            <input id="document-tags" placeholder="fastify, database, testing" />
+                            <small>Separate tags with commas.</small>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="button button-secondary" data-close="document-form">
+                            Cancel
+                        </button>
+
+                        <button type="submit" class="button button-primary" id="save-document">
+                            Create document
+                        </button>
+                    </div>
+                </form>
+
+                <div class="table-card">
+                    <div class="table-toolbar">
+                        <div>
+                            <strong>Documents</strong>
+                            <span class="table-count" id="document-count">0 documents</span>
+                        </div>
+
+                        <button class="button button-secondary button-small" id="reload-documents">
+                            Reload
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Document ID</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Tags</th>
+                                    <th>Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documents-table">
+                                <tr>
+                                    <td colspan="6" class="empty-state">
+                                        Open CouchDB to load documents.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-footer">
+                        CouchDB listing uses the configured document API.
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLICKHOUSE -->
+            <section class="view" id="view-analytics">
+                <div class="section-heading">
+                    <div>
+                        <h2>Operation observability</h2>
+                        <p>Execution logs and performance analytics from ClickHouse.</p>
+                    </div>
+
+                    <button class="button button-secondary" id="reload-analytics">
+                        Refresh analytics
+                    </button>
+                </div>
+
+                <div class="metric-grid analytics-metrics">
+                    <article class="metric-card">
+                        <span>Successful operations</span>
+                        <strong id="analytics-success">—</strong>
+                        <small>Across all logged operations</small>
+                    </article>
+
+                    <article class="metric-card">
+                        <span>Failed operations</span>
+                        <strong id="analytics-failed">—</strong>
+                        <small>Operations that returned errors</small>
+                    </article>
+
+                    <article class="metric-card">
+                        <span>Average duration</span>
+                        <strong id="analytics-average">—</strong>
+                        <small>Average measured duration</small>
+                    </article>
+
+                    <article class="metric-card">
+                        <span>Slowest operation</span>
+                        <strong id="analytics-slowest">—</strong>
+                        <small>Maximum recorded duration</small>
+                    </article>
+                </div>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Performance by database</h2>
+                        <p>Aggregated results from your operation logs.</p>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Database</th>
+                                    <th>Operation</th>
+                                    <th>Total</th>
+                                    <th>Success</th>
+                                    <th>Failures</th>
+                                    <th>Average</th>
+                                    <th>Maximum</th>
+                                    <th>P95</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-table">
+                                <tr>
+                                    <td colspan="8" class="empty-state">
+                                        Loading analytics...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Operation logs</h2>
+                        <p>Filter and inspect individual database operations.</p>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <label>
+                        Database
+                        <select id="filter-database">
+                            <option value="">All databases</option>
+                            <option value="CockroachDB">CockroachDB</option>
+                            <option value="CouchDB">CouchDB</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Status
+                        <select id="filter-status">
+                            <option value="">All statuses</option>
+                            <option value="SUCCESS">Success</option>
+                            <option value="FAILURE">Failure</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Limit
+                        <select id="filter-limit">
+                            <option value="25">25 logs</option>
+                            <option value="50" selected>50 logs</option>
+                            <option value="100">100 logs</option>
+                            <option value="500">500 logs</option>
+                        </select>
+                    </label>
+
+                    <button class="button button-primary" id="apply-filters">
+                        Apply filters
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Database</th>
+                                    <th>Operation</th>
+                                    <th>Function</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                    <th>Request ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-table">
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        Loading logs...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer">
+                <span>DB Lab <span class="footer-separator">/</span> Local Development</span>
+                <span>Fastify · CockroachDB · CouchDB · ClickHouse</span>
+            </footer>
+        </main>
+    </div>
+</body>
+
+</html>
