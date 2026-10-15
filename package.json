@@ -1,4 +1,12 @@
 {
   "name": "fastify",
-  "packageManager": "yarn@4.12.0"
+  "packageManager": "yarn@4.14.1",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "fastify": "^5.12.7"
+  }
 }
