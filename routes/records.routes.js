@@ -6,6 +6,26 @@ import {
     deleteRecord,
 } from "../services/record.service.js";
 
+// CockroachDB SERIAL values can be 64-bit unique_rowid values. Keep them as
+// decimal strings: converting them to Number loses precision above 2^53 - 1.
+const MAX_RECORD_ID = 9_223_372_036_854_775_807n;
+
+function parseRecordId(value) {
+    const rawId = String(value);
+
+    if (!/^\d+$/.test(rawId)) {
+        return null;
+    }
+
+    const id = BigInt(rawId);
+
+    if (id < 1n || id > MAX_RECORD_ID) {
+        return null;
+    }
+
+    return id.toString();
+}
+
 export default async function recordsRoutes(fastify) {
     // CREATE
     fastify.post(
@@ -53,9 +73,9 @@ export default async function recordsRoutes(fastify) {
 
     // READ ONE
     fastify.get("/:id", async (request, reply) => {
-        const id = Number(request.params.id);
+        const id = parseRecordId(request.params.id);
 
-        if (!Number.isSafeInteger(id) || id < 1) {
+        if (id === null) {
             return reply.code(400).send({
                 success: false,
                 error: "Invalid record ID",
@@ -97,9 +117,9 @@ export default async function recordsRoutes(fastify) {
             },
         },
         async (request, reply) => {
-            const id = Number(request.params.id);
+            const id = parseRecordId(request.params.id);
 
-            if (!Number.isSafeInteger(id) || id < 1) {
+            if (id === null) {
                 return reply.code(400).send({
                     success: false,
                     error: "Invalid record ID",
@@ -126,9 +146,9 @@ export default async function recordsRoutes(fastify) {
 
     // DELETE
     fastify.delete("/:id", async (request, reply) => {
-        const id = Number(request.params.id);
+        const id = parseRecordId(request.params.id);
 
-        if (!Number.isSafeInteger(id) || id < 1) {
+        if (id === null) {
             return reply.code(400).send({
                 success: false,
                 error: "Invalid record ID",
