@@ -63,3 +63,5 @@ export async function updateDocument(document) {
 export async function deleteDocument(id, revision) {
     return getDatabase().destroy(id, revision);
 }
+
+export { couchdb };
