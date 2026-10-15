@@ -1183,6 +1183,7 @@ __metadata:
     drizzle-kit: "npm:^0.31.11"
     drizzle-orm: "npm:^0.45.4"
     fastify: "npm:^5.12.7"
+    nano: "npm:^11.0.7"
     pg: "npm:^8.23.1"
   languageName: unknown
   linkType: soft
@@ -1309,6 +1310,13 @@ __metadata:
   dependencies:
     minipass: "npm:^7.1.2"
   checksum: 10c0/5aad75ab0090b8266069c9aabe582c021ae53eb33c6c691054a13a45db3b4f91a7fb1bd79151e6b4e9e9a86727b522527c0a06ec7d45206b745d54cd3097bcec
+  languageName: node
+  linkType: hard
+
+"nano@npm:^11.0.7":
+  version: 11.0.7
+  resolution: "nano@npm:11.0.7"
+  checksum: 10c0/9e1ca1f12cd131c955cf0bc993b98a55a761de3d1d4772f32b4b1b64ca67efe1382c78e95deb14dd7ca3d900477bd5182cbfc566c6576829a0ca5fb4c836b17a
   languageName: node
   linkType: hard
 

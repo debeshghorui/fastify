@@ -1,102 +1,65 @@
 import "dotenv/config";
+import Nano from "nano";
 
-const COUCHDB_URL = process.env.COUCHDB_URL ?? "http://127.0.0.1:5984";
-const COUCHDB_USER = process.env.COUCHDB_USER ?? "admin";
-const COUCHDB_PASSWORD = process.env.COUCHDB_PASSWORD;
-const COUCHDB_DATABASE = process.env.COUCHDB_DATABASE ?? "documents";
+const couchdb = Nano({
+    url: process.env.COUCHDB_URL ?? "http://127.0.0.1:5984",
+    requestDefaults: {
+        auth: {
+            username: process.env.COUCHDB_USER ?? "admin",
+            password: process.env.COUCHDB_PASSWORD,
+        },
+    },
+});
 
-if (!COUCHDB_PASSWORD) {
-    throw new Error("Missing COUCHDB_PASSWORD in environment variables");
+const DATABASE_NAME = process.env.COUCHDB_DATABASE ?? "documents";
+
+let database;
+
+export async function checkConnection() {
+    return couchdb.db.list();
 }
 
-const credentials = Buffer.from(
-    `${COUCHDB_USER}:${COUCHDB_PASSWORD}`,
-).toString("base64");
+export async function initializeDatabase() {
+    const databases = await couchdb.db.list();
 
-const headers = {
-    Authorization: `Basic ${credentials}`,
-    "Content-Type": "application/json",
-};
+    if (!databases.includes(DATABASE_NAME)) {
+        await couchdb.db.create(DATABASE_NAME);
+        console.log(`CouchDB database "${DATABASE_NAME}" created.`);
+    } else {
+        console.log(`CouchDB database "${DATABASE_NAME}" already exists.`);
+    }
 
-async function request(path, options = {}) {
-    const response = await fetch(`${COUCHDB_URL}${path}`, {
-        ...options,
-        headers: {
-            ...headers,
-            ...options.headers,
-        },
-    });
+    database = couchdb.db.use(DATABASE_NAME);
 
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    return database;
+}
 
-    if (!response.ok) {
+function getDatabase() {
+    if (!database) {
         throw new Error(
-            `CouchDB error (${response.status}): ${data?.reason ?? data?.error ?? response.statusText
-            }`,
+            "CouchDB is not initialized. Call initializeDatabase() first.",
         );
     }
 
-    return data;
+    return database;
 }
 
-// Check whether CouchDB is reachable and credentials are valid.
-export async function checkConnection() {
-    return request("/");
-}
-
-// Create the database if it doesn't already exist.
-export async function initializeDatabase() {
-    try {
-        await request(`/${encodeURIComponent(COUCHDB_DATABASE)}`, {
-            method: "PUT",
-        });
-
-        console.log(`CouchDB database "${COUCHDB_DATABASE}" created.`);
-    } catch (error) {
-        if (error.message.includes("412")) {
-            console.log(`CouchDB database "${COUCHDB_DATABASE}" already exists.`);
-            return;
-        }
-
-        throw error;
-    }
-}
-
-// Create a document with a generated ID.
 export async function createDocument(document) {
-    return request(`/${encodeURIComponent(COUCHDB_DATABASE)}`, {
-        method: "POST",
-        body: JSON.stringify(document),
-    });
+    return getDatabase().insert(document);
 }
 
-// Retrieve a document by ID.
 export async function getDocument(id) {
-    return request(
-        `/${encodeURIComponent(COUCHDB_DATABASE)}/${encodeURIComponent(id)}`,
-    );
+    return getDatabase().get(id);
 }
 
-// Update an existing document.
-export async function updateDocument(id, document) {
-    return request(
-        `/${encodeURIComponent(COUCHDB_DATABASE)}/${encodeURIComponent(id)}`,
-        {
-            method: "PUT",
-            body: JSON.stringify(document),
-        },
-    );
+export async function updateDocument(document) {
+    if (!document._id || !document._rev) {
+        throw new Error("Updating a document requires _id and _rev.");
+    }
+
+    return getDatabase().insert(document);
 }
 
-// Delete a document using its current revision.
 export async function deleteDocument(id, revision) {
-    const query = new URLSearchParams({ rev: revision });
-
-    return request(
-        `/${encodeURIComponent(COUCHDB_DATABASE)}/${encodeURIComponent(id)}?${query}`,
-        {
-            method: "DELETE",
-        },
-    );
+    return getDatabase().destroy(id, revision);
 }
